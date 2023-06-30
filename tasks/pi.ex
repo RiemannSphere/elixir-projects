@@ -14,15 +14,43 @@ defmodule Pi do
   # 2. await task values and count points on the circle
   # 3. calculate Pi
 
-  @n 100 
+  @n 100_000 
+
+  def parallel() do
+    count_points_parallel([], @n) 
+    |> Task.await_many
+    |> Enum.filter(fn in_circle? -> in_circle? == true end)
+    |> Enum.count
+    |> calculate_pi  
+  end
+
+  defp count_points_parallel(tasks, n) do
+    if n == 0 do
+      tasks
+    else
+      task = Task.async(fn -> in_circle?() end)
+      count_points_parallel([task | tasks], n - 1)
+    end
+  end
+
+  defp in_circle?() do
+    gen_point() |> to_distance() <= 1
+  end
 
   def non_parallel() do
-    gen_points([], @n)
+    points_in_circle = gen_points([], @n)
     |> Enum.map(fn p -> to_distance(p) end)
+    |> Enum.filter(fn d -> d <= 1 end)
+    |> Enum.count()
+    calculate_pi(points_in_circle)
+  end
+
+  defp calculate_pi(points_in_circle) do
+    4 * points_in_circle / @n
   end
 
   defp to_distance(point) do
-    p[]
+    point.x ** 2 + point.y ** 2
   end
 
   defp gen_points(points, n) do
@@ -35,8 +63,11 @@ defmodule Pi do
 
   defp gen_point() do
     # [0,1] x [0,1] because quarter of a circle is good enough
-    x = :random.uniform()
-    y = :random.uniform()
-    %{:x -> x, y: -> y}
+    x = :rand.uniform()
+    y = :rand.uniform()
+    %{x: x, y: y}
   end
 end
+
+#:timer.tc(Pi, :non_parallel, [])
+#:timer.tc(Pi, :parallel, [])
